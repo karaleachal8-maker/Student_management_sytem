@@ -23,17 +23,39 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // CORS (Cross-Origin Resource Sharing) Configuration
-const frontendUrl = process.env.FRONTEND_URL || '*';
+const rawFrontendUrl = process.env.FRONTEND_URL || '*';
+const allowedOrigins = rawFrontendUrl
+  .split(',')
+  .map((url) => {
+    const trimmed = url.trim();
+    if (trimmed === '*' || !trimmed) return trimmed;
+    try {
+      return new URL(trimmed).origin;
+    } catch {
+      return trimmed.replace(/\/+$/, '');
+    }
+  })
+  .filter(Boolean);
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (curl, Postman) or local file:/// origins ('null')
+    if (!origin || origin === 'null') return callback(null, true);
 
-    if (frontendUrl === '*' || origin === frontendUrl || frontendUrl.split(',').includes(origin)) {
+    // If wildcard is allowed
+    if (allowedOrigins.includes('*')) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+
+    // Always allow localhost and 127.0.0.1 ports during development
+    const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin);
+    if (isLocal) return callback(null, true);
+
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     } else {
-      // In production, reject unauthorized origins
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+      console.warn(`[CORS] Blocked request from unauthorized Origin: ${origin}`);
+      const msg = `The CORS policy for this site does not allow access from Origin: ${origin}`;
       return callback(new Error(msg), false);
     }
   },

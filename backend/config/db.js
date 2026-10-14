@@ -6,7 +6,8 @@ const mongoose = require('mongoose');
  */
 const connectDB = async () => {
   try {
-    const uri = process.env.MONGODB_URI;
+    const rawUri = process.env.MONGODB_URI;
+    const uri = rawUri ? rawUri.trim() : '';
 
     if (!uri || uri.includes('YOUR_PASSWORD') || uri.includes('cluster0.abcde')) {
       console.warn('⚠️  MONGODB_URI is not configured with valid credentials in .env.');
@@ -15,8 +16,9 @@ const connectDB = async () => {
       return false;
     }
 
+    const dbName = process.env.DB_NAME || 'studentDB';
     const conn = await mongoose.connect(uri, {
-      dbName: 'studentDB',
+      dbName,
     });
 
     console.log(`✅ MongoDB Atlas Connected: ${conn.connection.host}`);
