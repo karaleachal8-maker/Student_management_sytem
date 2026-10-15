@@ -22,7 +22,9 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ==========================================
 // CORS (Cross-Origin Resource Sharing) Configuration
+// ==========================================
 const rawFrontendUrl = process.env.FRONTEND_URL || '*';
 const allowedOrigins = rawFrontendUrl
   .split(',')
@@ -39,32 +41,50 @@ const allowedOrigins = rawFrontendUrl
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman) or local file:/// origins ('null')
-    if (!origin || origin === 'null') return callback(null, true);
+    // 1. Allow requests with no origin (curl, Postman, server-to-server) or local file:// ('null')
+    if (!origin || origin === 'null') {
+      return callback(null, true);
+    }
 
-    // If wildcard is allowed
-    if (allowedOrigins.includes('*')) return callback(null, true);
+    // 2. Allow if wildcard '*' is in FRONTEND_URL
+    if (allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
 
     const normalizedOrigin = origin.replace(/\/+$/, '');
 
-    // Always allow localhost and 127.0.0.1 ports during development
-    const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin);
-    if (isLocal) return callback(null, true);
+    // 3. Always allow localhost and 127.0.0.1 on any port during local development
+    const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalizedOrigin);
+    if (isLocal) {
+      return callback(null, true);
+    }
 
+    // 4. Automatically allow Netlify production and deploy preview domains (*.netlify.app)
+    const isNetlify = /^https:\/\/[a-zA-Z0-9-]+(\.netlify\.app)$/i.test(normalizedOrigin) || 
+                      /^https:\/\/[a-zA-Z0-9-]+--[a-zA-Z0-9-]+\.netlify\.app$/i.test(normalizedOrigin);
+    if (isNetlify) {
+      return callback(null, true);
+    }
+
+    // 5. Allow exact matches configured in FRONTEND_URL
     if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
-    } else {
-      console.warn(`[CORS] Blocked request from unauthorized Origin: ${origin}`);
-      const msg = `The CORS policy for this site does not allow access from Origin: ${origin}`;
-      return callback(new Error(msg), false);
     }
+
+    // Reject origin gracefully without throwing an unhandled server error
+    console.warn(`[CORS] Blocked request from unauthorized Origin: ${origin}`);
+    return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   credentials: true,
+  optionsSuccessStatus: 204,
 };
 
+// Register CORS middleware before any routes
 app.use(cors(corsOptions));
+// Handle preflight OPTIONS requests across all routes
+app.options('*', cors(corsOptions));
 
 // Request logging middleware for debugging during development
 app.use((req, res, next) => {

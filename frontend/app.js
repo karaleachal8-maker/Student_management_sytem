@@ -8,12 +8,35 @@
   'use strict';
 
   // ==========================================
-  // Configuration & State
+  // Configuration & State (Centralized API Base)
   // ==========================================
+  // Production Render Backend URL (reused from project deployment configuration in README.md)
+  const RENDER_BACKEND_URL = 'https://student-management-api.onrender.com';
+  const LOCAL_BACKEND_URL = 'http://localhost:5000';
   const STORAGE_KEY_API = 'SIMS_API_BASE_URL';
-  const DEFAULT_API_BASE = 'http://localhost:5000';
 
-  let apiBaseUrl = localStorage.getItem(STORAGE_KEY_API) || DEFAULT_API_BASE;
+  // Environment Detection:
+  // Detect if running on localhost / 127.0.0.1 / file:// vs hosted in production (e.g. Netlify)
+  const isLocalHost = 
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' || 
+    window.location.protocol === 'file:';
+
+  const DEFAULT_API_BASE = isLocalHost ? LOCAL_BACKEND_URL : RENDER_BACKEND_URL;
+
+  // Resolve initial API base URL:
+  // When running on Netlify, if localStorage has old 'http://localhost:5000' stored from previous
+  // local sessions, clear it so the client automatically connects to the live Render backend.
+  function getInitialApiBaseUrl() {
+    const saved = (localStorage.getItem(STORAGE_KEY_API) || '').trim();
+    if (!isLocalHost && (!saved || saved.includes('localhost') || saved.includes('127.0.0.1'))) {
+      localStorage.removeItem(STORAGE_KEY_API);
+      return RENDER_BACKEND_URL;
+    }
+    return saved || DEFAULT_API_BASE;
+  }
+
+  let apiBaseUrl = getInitialApiBaseUrl();
   let students = [];
   let isBackendOnline = false;
   let studentToDelete = null;
@@ -190,26 +213,27 @@
         headers: { 'Accept': 'application/json' },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        isBackendOnline = true;
-        DOM.apiStatusDot.className = 'status-indicator status-online';
-        DOM.apiStatusLabel.textContent = 'API Connected (Tier 2)';
-        
-        if (data.databaseStatus === 'connected') {
-          DOM.statDbStatus.textContent = 'Atlas Live';
-          DOM.statDbStatus.className = 'stat-value text-emerald';
-          DOM.statDbInfo.textContent = 'studentDB &middot; students';
-        } else {
-          DOM.statDbStatus.textContent = 'Standby';
-          DOM.statDbStatus.className = 'stat-value';
-          DOM.statDbInfo.textContent = 'Awaiting Atlas URI in .env';
-        }
-        return true;
-      } else {
+      if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+
+      const data = await response.json();
+      isBackendOnline = true;
+      DOM.apiStatusDot.className = 'status-indicator status-online';
+      DOM.apiStatusLabel.textContent = 'API Connected (Tier 2)';
+      
+      if (data.databaseStatus === 'connected') {
+        DOM.statDbStatus.textContent = 'Atlas Live';
+        DOM.statDbStatus.className = 'stat-value text-emerald';
+        DOM.statDbInfo.textContent = 'studentDB &middot; students';
+      } else {
+        DOM.statDbStatus.textContent = 'Standby';
+        DOM.statDbStatus.className = 'stat-value';
+        DOM.statDbInfo.textContent = 'Database standby / connecting...';
+      }
+      return true;
     } catch (err) {
+      console.warn('API Health Check failed:', err);
       isBackendOnline = false;
       DOM.apiStatusDot.className = 'status-indicator status-offline';
       DOM.apiStatusLabel.textContent = 'API Offline (Tier 2)';
@@ -222,6 +246,8 @@
 
   /**
    * Fetch All Students: GET /api/students
+   * Reads student records from response.data according to API format:
+   * { "success": true, "count": N, "data": [...] }
    */
   async function fetchStudents() {
     DOM.loadingState.style.display = 'flex';
@@ -231,27 +257,65 @@
     try {
       const response = await fetch(`${apiBaseUrl}/api/students`, {
         method: 'GET',
-        headers: { 'Accept': 'application/json' },
+        headers: { 
+          'Accept': 'application/json' 
+        },
       });
 
-      const result = await response.json();
+      // Handle HTTP error responses gracefully before parsing JSON
+      if (!response.ok) {
+        let serverMsg = '';
+        try {
+          const errData = await response.json();
+          serverMsg = errData && errData.message ? errData.message : '';
+        } catch (_) {
+          // Response body was not JSON (e.g. HTML 502/504 gateway timeout while Render is waking up)
+        }
 
-      if (response.ok && result.success) {
-        students = result.data || [];
-        updateStats();
-        renderTable();
-      } else if (response.status === 503) {
-        // Database not connected yet
-        showToast(result.message || 'Database not connected. Please set MONGODB_URI in backend/.env', 'error');
+        if (response.status === 503) {
+          showToast(serverMsg || 'Database not connected. Please verify MongoDB Atlas credentials on Render.', 'error');
+        } else if (response.status === 404) {
+          showToast(`API endpoint not found (HTTP 404) at ${apiBaseUrl}/api/students. Check backend routes.`, 'error');
+        } else {
+          showToast(serverMsg || `Backend server returned HTTP ${response.status} (${response.statusText || 'Error'}).`, 'error');
+        }
         students = [];
         updateStats();
         renderTable();
-      } else {
-        throw new Error(result.message || 'Failed to fetch student records');
+        return;
       }
+
+      const result = await response.json();
+
+      // Read student records reliably from response.data
+      if (result && Array.isArray(result.data)) {
+        students = result.data;
+      } else if (Array.isArray(result)) {
+        students = result;
+      } else if (result && result.students && Array.isArray(result.students)) {
+        students = result.students;
+      } else {
+        students = [];
+      }
+
+      updateStats();
+      renderTable();
     } catch (err) {
       console.warn('API error fetching students:', err);
-      showToast(`Cannot reach Backend API at ${apiBaseUrl}. Ensure "node server.js" is running.`, 'error');
+
+      // Provide clear, contextual troubleshooting guidance
+      const isMixedContent = window.location.protocol === 'https:' && apiBaseUrl.startsWith('http://');
+      let friendlyMessage = '';
+
+      if (isMixedContent) {
+        friendlyMessage = `Mixed Content Blocked: Netlify (HTTPS) cannot access insecure HTTP API (${apiBaseUrl}). Use https:// in API Base URL.`;
+      } else if (apiBaseUrl.includes('localhost') && !isLocalHost) {
+        friendlyMessage = `Cannot reach localhost (${apiBaseUrl}) from live Netlify. Configure your Render API URL in Settings (gear icon).`;
+      } else {
+        friendlyMessage = `Cannot reach Backend API at ${apiBaseUrl} (${err.message || 'Failed to fetch'}). Free-tier Render services sleep on inactivity and take ~50s to wake up.`;
+      }
+
+      showToast(friendlyMessage, 'error');
       students = [];
       updateStats();
       renderTable();
@@ -264,18 +328,29 @@
    * Create Student: POST /api/students
    */
   async function apiCreateStudent(studentData) {
-    const response = await fetch(`${apiBaseUrl}/api/students`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(studentData),
-    });
+    let response;
+    try {
+      response = await fetch(`${apiBaseUrl}/api/students`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(studentData),
+      });
+    } catch (netErr) {
+      throw new Error(`Network failure connecting to ${apiBaseUrl}: ${netErr.message || 'Failed to fetch'}`);
+    }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (_) {
+      throw new Error(`Server returned HTTP ${response.status} with an unparseable response.`);
+    }
+
     if (!response.ok || !result.success) {
-      throw new Error(result.message || 'Failed to create student record');
+      throw new Error(result.message || `Failed to create student (HTTP ${response.status})`);
     }
     return result;
   }
@@ -284,18 +359,29 @@
    * Update Student: PUT /api/students/:id
    */
   async function apiUpdateStudent(studentId, studentData) {
-    const response = await fetch(`${apiBaseUrl}/api/students/${encodeURIComponent(studentId)}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(studentData),
-    });
+    let response;
+    try {
+      response = await fetch(`${apiBaseUrl}/api/students/${encodeURIComponent(studentId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(studentData),
+      });
+    } catch (netErr) {
+      throw new Error(`Network failure connecting to ${apiBaseUrl}: ${netErr.message || 'Failed to fetch'}`);
+    }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (_) {
+      throw new Error(`Server returned HTTP ${response.status} with an unparseable response.`);
+    }
+
     if (!response.ok || !result.success) {
-      throw new Error(result.message || 'Failed to update student record');
+      throw new Error(result.message || `Failed to update student (HTTP ${response.status})`);
     }
     return result;
   }
@@ -304,14 +390,27 @@
    * Delete Student: DELETE /api/students/:id
    */
   async function apiDeleteStudent(studentId) {
-    const response = await fetch(`${apiBaseUrl}/api/students/${encodeURIComponent(studentId)}`, {
-      method: 'DELETE',
-      headers: { 'Accept': 'application/json' },
-    });
+    let response;
+    try {
+      response = await fetch(`${apiBaseUrl}/api/students/${encodeURIComponent(studentId)}`, {
+        method: 'DELETE',
+        headers: { 
+          'Accept': 'application/json' 
+        },
+      });
+    } catch (netErr) {
+      throw new Error(`Network failure connecting to ${apiBaseUrl}: ${netErr.message || 'Failed to fetch'}`);
+    }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = await response.json();
+    } catch (_) {
+      throw new Error(`Server returned HTTP ${response.status} with an unparseable response.`);
+    }
+
     if (!response.ok || !result.success) {
-      throw new Error(result.message || 'Failed to delete student record');
+      throw new Error(result.message || `Failed to delete student (HTTP ${response.status})`);
     }
     return result;
   }
@@ -756,6 +855,7 @@
 
   function openApiSettingsModal() {
     DOM.apiUrlInput.value = apiBaseUrl;
+    DOM.apiUrlInput.placeholder = RENDER_BACKEND_URL;
     DOM.apiTestResult.style.display = 'none';
     DOM.apiSettingsModal.classList.add('open');
     DOM.apiSettingsModal.setAttribute('aria-hidden', 'false');
@@ -772,18 +872,27 @@
     DOM.apiTestResult.className = 'api-test-result';
     DOM.apiTestResult.textContent = 'Testing connection...';
 
+    if (!testUrl) {
+      DOM.apiTestResult.className = 'api-test-result api-test-error';
+      DOM.apiTestResult.textContent = 'Please enter an API Base URL to test.';
+      return;
+    }
+
     try {
-      const res = await fetch(`${testUrl}/health`, { method: 'GET' });
+      const res = await fetch(`${testUrl}/health`, { 
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
       if (res.ok) {
         const data = await res.json();
         DOM.apiTestResult.className = 'api-test-result api-test-success';
-        DOM.apiTestResult.textContent = `Success! Connected to ${data.tier}. Database Status: ${data.databaseStatus}`;
+        DOM.apiTestResult.textContent = `Success! Connected to ${data.tier || 'Backend'}. Database Status: ${data.databaseStatus || 'online'}`;
       } else {
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error(`HTTP ${res.status} (${res.statusText || 'Server Error'})`);
       }
     } catch (err) {
       DOM.apiTestResult.className = 'api-test-result api-test-error';
-      DOM.apiTestResult.textContent = `Connection failed: ${err.message}. Ensure backend is running.`;
+      DOM.apiTestResult.textContent = `Connection failed: ${err.message}. Verify that the backend is active and CORS is allowed.`;
     }
   }
 
@@ -895,7 +1004,7 @@
     DOM.cancelApiSettingsBtn.addEventListener('click', closeApiSettingsModal);
     DOM.saveApiSettingsBtn.addEventListener('click', saveApiSettings);
     DOM.setLocalApiPreset.addEventListener('click', () => {
-      DOM.apiUrlInput.value = DEFAULT_API_BASE;
+      DOM.apiUrlInput.value = LOCAL_BACKEND_URL;
     });
     DOM.testApiConnectionBtn.addEventListener('click', testApiConnection);
 
