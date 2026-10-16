@@ -341,6 +341,45 @@
   }
 
   /**
+   * Safe response parser that extracts backend JSON or produces clear, actionable error messages
+   * when servers return HTML (such as Netlify/Render 404 or 502/503 cold-start pages).
+   */
+  async function handleApiResponse(response, actionDescription) {
+    let rawText = '';
+    let parsed = null;
+
+    try {
+      rawText = await response.text();
+      parsed = JSON.parse(rawText);
+    } catch (_) {
+      // Server returned a non-JSON response (e.g. HTML 404 / 502 / 503)
+      if (response.status === 404) {
+        throw new Error(
+          `API endpoint not found (HTTP 404) at ${response.url || apiBaseUrl}. ` +
+          `The server returned HTML instead of JSON. Please ensure your Backend API URL is configured correctly ` +
+          `in Settings (gear icon in header) and that your backend server is deployed and running.`
+        );
+      } else if (response.status === 502 || response.status === 503 || response.status === 504) {
+        throw new Error(
+          `Backend server is temporarily unavailable (HTTP ${response.status}) at ${apiBaseUrl}. ` +
+          `Free-tier Render services sleep on inactivity and take ~50 seconds to wake up. Please wait a moment and try again.`
+        );
+      } else {
+        throw new Error(
+          `Server at ${apiBaseUrl} returned HTTP ${response.status} (${response.statusText || 'Error'}) ` +
+          `with an unparseable (HTML) response. Please check your backend server.`
+        );
+      }
+    }
+
+    if (!response.ok || !parsed.success) {
+      throw new Error(parsed.message || `Failed to ${actionDescription} (HTTP ${response.status})`);
+    }
+
+    return parsed;
+  }
+
+  /**
    * Create Student: POST /api/students
    */
   async function apiCreateStudent(studentData) {
@@ -358,17 +397,7 @@
       throw new Error(`Network failure connecting to ${apiBaseUrl}: ${netErr.message || 'Failed to fetch'}`);
     }
 
-    let result;
-    try {
-      result = await response.json();
-    } catch (_) {
-      throw new Error(`Server returned HTTP ${response.status} with an unparseable response.`);
-    }
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || `Failed to create student (HTTP ${response.status})`);
-    }
-    return result;
+    return await handleApiResponse(response, 'create student');
   }
 
   /**
@@ -389,17 +418,7 @@
       throw new Error(`Network failure connecting to ${apiBaseUrl}: ${netErr.message || 'Failed to fetch'}`);
     }
 
-    let result;
-    try {
-      result = await response.json();
-    } catch (_) {
-      throw new Error(`Server returned HTTP ${response.status} with an unparseable response.`);
-    }
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || `Failed to update student (HTTP ${response.status})`);
-    }
-    return result;
+    return await handleApiResponse(response, 'update student');
   }
 
   /**
@@ -418,17 +437,7 @@
       throw new Error(`Network failure connecting to ${apiBaseUrl}: ${netErr.message || 'Failed to fetch'}`);
     }
 
-    let result;
-    try {
-      result = await response.json();
-    } catch (_) {
-      throw new Error(`Server returned HTTP ${response.status} with an unparseable response.`);
-    }
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || `Failed to delete student (HTTP ${response.status})`);
-    }
-    return result;
+    return await handleApiResponse(response, 'delete student');
   }
 
   // ==========================================
@@ -632,7 +641,7 @@
     DOM.studentForm.reset();
     DOM.formOriginalId.value = '';
     DOM.modalTitle.textContent = 'Add New Student';
-    DOM.saveBtnText.textContent = 'Save to MongoDB';
+    DOM.saveBtnText.textContent = 'Save';
     DOM.modalActionIcon.innerHTML = '<i class="fa-solid fa-user-plus"></i>';
     DOM.formStudentId.disabled = false;
 
@@ -649,7 +658,7 @@
     DOM.studentForm.reset();
     DOM.formOriginalId.value = student.studentId;
     DOM.modalTitle.textContent = 'Edit Student Information';
-    DOM.saveBtnText.textContent = 'Update Record';
+    DOM.saveBtnText.textContent = 'Save';
     DOM.modalActionIcon.innerHTML = '<i class="fa-solid fa-user-pen"></i>';
 
     DOM.formStudentId.value = student.studentId;
@@ -942,6 +951,9 @@
       e.stopPropagation();
       openApiSettingsModal();
     });
+    if (DOM.apiStatusPill) {
+      DOM.apiStatusPill.addEventListener('click', openApiSettingsModal);
+    }
 
     // Search Input
     DOM.studentSearchInput.addEventListener('input', (e) => {
