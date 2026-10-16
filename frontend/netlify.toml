@@ -1,4 +1,4 @@
-# Netlify Deployment Configuration for Student Information Management System (Tier 1)
+# Netlify Deployment Configuration for Student Information Management System
 
 [build]
   publish = "."

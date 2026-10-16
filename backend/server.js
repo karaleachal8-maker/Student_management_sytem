@@ -5,8 +5,10 @@ const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const studentRoutes = require('./routes/studentRoutes');
 
-// Load environment variables from .env file
-dotenv.config();
+const path = require('path');
+
+// Load environment variables from backend/.env reliably regardless of execution CWD
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Initialize Express App
 const app = express();
@@ -97,13 +99,11 @@ app.use((req, res, next) => {
 // API Routes
 // ==========================================
 
-// Health Check Endpoint (Required by Render & College Demo)
+// Health Check Endpoint
 app.get('/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   res.status(200).json({
     status: 'OK',
-    tier: 'Tier 2 - Application Layer (Express.js on Render)',
-    databaseTier: 'Tier 3 - MongoDB Atlas',
     databaseStatus: dbStatus,
     timestamp: new Date().toISOString(),
     uptime: `${Math.floor(process.uptime())}s`,
@@ -113,15 +113,16 @@ app.get('/health', (req, res) => {
 // Root Welcome Route
 app.get('/', (req, res) => {
   res.status(200).json({
-    message: '🎓 Student Information Management System API (Three-Tier Architecture)',
+    message: '🎓 Student Information Management System API',
     documentation: 'See README.md for endpoint specifications',
     healthCheck: '/health',
     apiBase: '/api/students',
   });
 });
 
-// Mount Student API Routes
+// Mount Student API Routes (supports both /api/students and /students)
 app.use('/api/students', studentRoutes);
+app.use('/students', studentRoutes);
 
 // ==========================================
 // Error Handling Middleware
@@ -152,7 +153,7 @@ const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
   console.log('====================================================');
-  console.log('🚀 Student Information Management System API (Tier 2)');
+  console.log('🚀 Student Information Management System API');
   console.log(`📡 Server running on port: ${PORT}`);
   console.log(`🌐 Base URL: http://localhost:${PORT}`);
   console.log(`🩺 Health check: http://localhost:${PORT}/health`);

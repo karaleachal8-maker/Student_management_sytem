@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Information Management System</title>
-  <meta name="description" content="Student Information Management System built with Three-Tier Cloud Architecture (Netlify, Render, MongoDB Atlas).">
+  <meta name="description" content="Student Information Management System - Manage student records easily.">
   
   <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,9 +29,6 @@
           </div>
           <div class="brand-info">
             <h1 class="brand-title">Student Information Management System</h1>
-            <p class="brand-subtitle">
-              Three-Tier Cloud Architecture &middot; <span class="badge-tier">Tier 1: Netlify</span>
-            </p>
           </div>
         </div>
 
@@ -61,65 +58,6 @@
     <!-- Main Content Area -->
     <main class="main-body">
       <div class="body-container">
-
-        <!-- Architecture Overview Banner -->
-        <section class="architecture-banner" aria-label="Cloud Architecture Info">
-          <div class="arch-badge">Three-Tier Cloud Architecture</div>
-          <div class="arch-flow">
-            <span class="arch-tier tier-frontend"><i class="fa-solid fa-desktop"></i> Netlify (Frontend)</span>
-            <i class="fa-solid fa-arrow-right arch-arrow"></i>
-            <span class="arch-tier tier-backend"><i class="fa-solid fa-server"></i> Render (Express REST API)</span>
-            <i class="fa-solid fa-arrow-right arch-arrow"></i>
-            <span class="arch-tier tier-db"><i class="fa-solid fa-database"></i> MongoDB Atlas (studentDB)</span>
-          </div>
-        </section>
-
-        <!-- Dashboard Statistics Cards -->
-        <section class="stats-row" aria-label="System Statistics">
-          <div class="stat-box">
-            <div class="stat-icon-container stat-blue">
-              <i class="fa-solid fa-users"></i>
-            </div>
-            <div class="stat-content">
-              <span class="stat-title">Total Students</span>
-              <h2 class="stat-value" id="statTotalStudents">0</h2>
-              <span class="stat-subtext">Registered in MongoDB</span>
-            </div>
-          </div>
-
-          <div class="stat-box">
-            <div class="stat-icon-container stat-sky">
-              <i class="fa-solid fa-building-columns"></i>
-            </div>
-            <div class="stat-content">
-              <span class="stat-title">Departments</span>
-              <h2 class="stat-value" id="statDepartmentCount">0</h2>
-              <span class="stat-subtext" id="statTopDepartment">Top: Loading...</span>
-            </div>
-          </div>
-
-          <div class="stat-box">
-            <div class="stat-icon-container stat-indigo">
-              <i class="fa-solid fa-layer-group"></i>
-            </div>
-            <div class="stat-content">
-              <span class="stat-title">Average Semester</span>
-              <h2 class="stat-value" id="statAvgSemester">0.0</h2>
-              <span class="stat-subtext">Sem 1 &ndash; Sem 8 Range</span>
-            </div>
-          </div>
-
-          <div class="stat-box">
-            <div class="stat-icon-container stat-emerald">
-              <i class="fa-solid fa-cloud-arrow-up"></i>
-            </div>
-            <div class="stat-content">
-              <span class="stat-title">Database Status</span>
-              <h2 class="stat-value text-emerald" id="statDbStatus">Atlas Live</h2>
-              <span class="stat-subtext" id="statDbInfo">collection: students</span>
-            </div>
-          </div>
-        </section>
 
         <!-- Search, Filter & Controls Bar -->
         <section class="filter-card" aria-label="Search and Filter Students">
@@ -199,7 +137,7 @@
         <!-- Loading State Indicator -->
         <div class="loading-state" id="loadingState" style="display: none;">
           <div class="spinner"></div>
-          <p class="loading-text">Communicating with Render Backend API & MongoDB Atlas...</p>
+          <p class="loading-text">Loading student records...</p>
         </div>
 
         <!-- Student Records Table Card -->
@@ -243,8 +181,7 @@
     <!-- Professional Footer -->
     <footer class="app-footer">
       <div class="footer-container">
-        <p>&copy; 2026 Student Information Management System &middot; College Cloud Computing Assignment</p>
-        <p class="footer-subtext">Presentation: Netlify &nbsp;|&nbsp; Application: Render (Node/Express) &nbsp;|&nbsp; Database: MongoDB Atlas (Mongoose)</p>
+        <p>&copy; 2026 Student Information Management System</p>
       </div>
     </footer>
   </div>
@@ -261,7 +198,7 @@
           </div>
           <div>
             <h3 id="modalTitle">Add New Student</h3>
-            <p class="modal-desc">Enter complete student information to register in MongoDB Atlas.</p>
+            <p class="modal-desc">Enter complete student information to register student.</p>
           </div>
         </div>
         <button type="button" class="btn-close-modal" id="closeStudentModalBtn" aria-label="Close modal">
@@ -359,7 +296,7 @@
           <button type="button" class="btn btn-secondary" id="cancelFormBtn">Cancel</button>
           <button type="submit" class="btn btn-primary" id="saveStudentBtn">
             <i class="fa-solid fa-check"></i>
-            <span id="saveBtnText">Save to MongoDB</span>
+            <span id="saveBtnText">Save Student</span>
           </button>
         </div>
       </form>
@@ -396,7 +333,7 @@
       </div>
       <h3 class="alert-title" id="deleteTitle">Delete Student Record?</h3>
       <p class="alert-desc">
-        Are you sure you want to permanently delete <strong id="deleteStudentDisplayName">Student</strong> (<span id="deleteStudentDisplayId"></span>) from MongoDB Atlas? This action cannot be undone.
+        Are you sure you want to permanently delete <strong id="deleteStudentDisplayName">Student</strong> (<span id="deleteStudentDisplayId"></span>)? This action cannot be undone.
       </p>
       <div class="modal-footer modal-footer-alert">
         <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
@@ -418,7 +355,7 @@
           </div>
           <div>
             <h3>Backend API Configuration</h3>
-            <p class="modal-desc">Configure the URL of the Render Express REST API (Tier 2).</p>
+            <p class="modal-desc">Configure the URL of the Backend REST API.</p>
           </div>
         </div>
         <button type="button" class="btn-close-modal" id="closeApiSettingsBtn" aria-label="Close API config">

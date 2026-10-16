@@ -1,7 +1,7 @@
 {
   "name": "student-management-backend",
   "version": "1.0.0",
-  "description": "REST API Backend for Student Information Management System (Three-Tier Architecture)",
+  "description": "REST API Backend for Student Information Management System",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -18,8 +18,7 @@
     "student-management",
     "express",
     "mongodb",
-    "rest-api",
-    "three-tier-architecture"
+    "rest-api"
   ],
   "author": "",
   "license": "ISC"

@@ -1,7 +1,6 @@
 /**
  * Student Information Management System (SIMS)
- * Presentation Layer Client Application Logic (Tier 1: Netlify)
- * Communicates with Render Express REST API (Tier 2) & MongoDB Atlas (Tier 3)
+ * Client Application Logic
  */
 
 (function () {
@@ -220,26 +219,28 @@
       const data = await response.json();
       isBackendOnline = true;
       DOM.apiStatusDot.className = 'status-indicator status-online';
-      DOM.apiStatusLabel.textContent = 'API Connected (Tier 2)';
+      DOM.apiStatusLabel.textContent = 'API Connected';
       
-      if (data.databaseStatus === 'connected') {
-        DOM.statDbStatus.textContent = 'Atlas Live';
-        DOM.statDbStatus.className = 'stat-value text-emerald';
-        DOM.statDbInfo.textContent = 'studentDB &middot; students';
-      } else {
-        DOM.statDbStatus.textContent = 'Standby';
-        DOM.statDbStatus.className = 'stat-value';
-        DOM.statDbInfo.textContent = 'Database standby / connecting...';
+      if (DOM.statDbStatus) {
+        if (data.databaseStatus === 'connected') {
+          DOM.statDbStatus.textContent = 'Live';
+          DOM.statDbStatus.className = 'stat-value text-emerald';
+        } else {
+          DOM.statDbStatus.textContent = 'Standby';
+          DOM.statDbStatus.className = 'stat-value';
+        }
       }
       return true;
     } catch (err) {
       console.warn('API Health Check failed:', err);
       isBackendOnline = false;
       DOM.apiStatusDot.className = 'status-indicator status-offline';
-      DOM.apiStatusLabel.textContent = 'API Offline (Tier 2)';
-      DOM.statDbStatus.textContent = 'Offline';
-      DOM.statDbStatus.className = 'stat-value';
-      DOM.statDbInfo.textContent = 'Check backend server';
+      DOM.apiStatusLabel.textContent = 'API Offline';
+      if (DOM.statDbStatus) {
+        DOM.statDbStatus.textContent = 'Offline';
+        DOM.statDbStatus.className = 'stat-value';
+        if (DOM.statDbInfo) DOM.statDbInfo.textContent = 'Check backend server';
+      }
       return false;
     }
   }
@@ -255,12 +256,27 @@
     DOM.emptyBox.style.display = 'none';
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/students`, {
+      let response = await fetch(`${apiBaseUrl}/api/students`, {
         method: 'GET',
         headers: { 
           'Accept': 'application/json' 
         },
       });
+
+      // If /api/students returns 404, fallback to /students in case backend is mounted at root
+      if (response.status === 404) {
+        try {
+          const fallbackResponse = await fetch(`${apiBaseUrl}/students`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+          });
+          if (fallbackResponse.ok) {
+            response = fallbackResponse;
+          }
+        } catch (_) {
+          // Keep original response
+        }
+      }
 
       // Handle HTTP error responses gracefully before parsing JSON
       if (!response.ok) {
@@ -269,11 +285,11 @@
           const errData = await response.json();
           serverMsg = errData && errData.message ? errData.message : '';
         } catch (_) {
-          // Response body was not JSON (e.g. HTML 502/504 gateway timeout while Render is waking up)
+          // Response body was not JSON
         }
 
         if (response.status === 503) {
-          showToast(serverMsg || 'Database not connected. Please verify MongoDB Atlas credentials on Render.', 'error');
+          showToast(serverMsg || 'Database not connected. Please verify database connection on backend.', 'error');
         } else if (response.status === 404) {
           showToast(`API endpoint not found (HTTP 404) at ${apiBaseUrl}/api/students. Check backend routes.`, 'error');
         } else {
@@ -420,6 +436,7 @@
   // ==========================================
 
   function updateStats() {
+    if (!DOM.statTotalStudents) return;
     const total = students.length;
     DOM.statTotalStudents.textContent = total;
 
@@ -886,7 +903,7 @@
       if (res.ok) {
         const data = await res.json();
         DOM.apiTestResult.className = 'api-test-result api-test-success';
-        DOM.apiTestResult.textContent = `Success! Connected to ${data.tier || 'Backend'}. Database Status: ${data.databaseStatus || 'online'}`;
+        DOM.apiTestResult.textContent = `Success! Connected to backend API. Database Status: ${data.databaseStatus || 'online'}`;
       } else {
         throw new Error(`HTTP ${res.status} (${res.statusText || 'Server Error'})`);
       }

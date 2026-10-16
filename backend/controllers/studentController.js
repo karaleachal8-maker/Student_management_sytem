@@ -156,7 +156,7 @@ const createStudent = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Student record registered successfully in MongoDB Atlas',
+      message: 'Student record registered successfully',
       data: student,
     });
   } catch (error) {
@@ -313,7 +313,7 @@ const deleteStudent = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Student "${student.name}" (ID: ${student.studentId}) successfully deleted from MongoDB Atlas`,
+      message: `Student "${student.name}" (ID: ${student.studentId}) successfully deleted`,
       data: {
         id: student._id,
         studentId: student.studentId,
