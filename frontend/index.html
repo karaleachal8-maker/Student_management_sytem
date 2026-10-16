@@ -365,15 +365,18 @@
       <div class="api-settings-body">
         <div class="form-field">
           <label for="apiUrlInput">API Base URL</label>
-          <input type="url" id="apiUrlInput" placeholder="https://student-management-api.onrender.com" class="input-full">
+          <input type="url" id="apiUrlInput" placeholder="https://student-management-sytem-2ehv.onrender.com" class="input-full">
           <span class="field-hint">
-            Local: <code>http://localhost:5000</code> &nbsp;|&nbsp; Production: <code>https://student-management-api.onrender.com</code>
+            Local: <code>http://localhost:5000</code> &nbsp;|&nbsp; Production: <code>https://student-management-sytem-2ehv.onrender.com</code>
           </span>
         </div>
 
         <div class="api-presets">
           <button type="button" class="btn btn-sm btn-secondary" id="setLocalApiPreset">
             <i class="fa-solid fa-laptop"></i> Use Localhost (5000)
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" id="setRenderApiPreset">
+            <i class="fa-solid fa-cloud"></i> Use Render Cloud
           </button>
           <button type="button" class="btn btn-sm btn-secondary" id="testApiConnectionBtn">
             <i class="fa-solid fa-plug"></i> Test Connection

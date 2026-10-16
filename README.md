@@ -339,8 +339,8 @@ Simply open `frontend/index.html` in your web browser:
    - `MONGODB_URI` = `<Your MongoDB Atlas connection string with real password>`
    - `FRONTEND_URL` = `https://<your-app-name>.netlify.app` (or `*` during initial testing)
 7. Click **Create Web Service**.
-8. Once deployed, copy your Render URL: e.g., `https://student-management-api.onrender.com`.
-9. Test by opening `https://student-management-api.onrender.com/health` in your browser.
+8. Once deployed, copy your Render URL: `https://student-management-sytem-2ehv.onrender.com`.
+9. Test by opening `https://student-management-sytem-2ehv.onrender.com/health` in your browser.
 
 ---
 
@@ -355,7 +355,7 @@ Simply open `frontend/index.html` in your web browser:
 5. Click **Deploy Site**.
 6. Once deployed, open your live Netlify dashboard:
    - Click the **Gear icon** in the top navigation bar of the application.
-   - Paste your Render API URL: `https://student-management-api.onrender.com`.
+   - Click **Use Render Cloud** (or paste `https://student-management-sytem-2ehv.onrender.com`).
    - Click **Save & Connect**.
    - The indicator turns green: **API Connected (Tier 2)**!
 

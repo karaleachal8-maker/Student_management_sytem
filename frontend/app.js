@@ -9,8 +9,8 @@
   // ==========================================
   // Configuration & State (Centralized API Base)
   // ==========================================
-  // Production Render Backend URL (reused from project deployment configuration in README.md)
-  const RENDER_BACKEND_URL = 'https://student-management-api.onrender.com';
+  // Production Render Backend URL
+  const RENDER_BACKEND_URL = 'https://student-management-sytem-2ehv.onrender.com';
   const LOCAL_BACKEND_URL = 'http://localhost:5000';
   const STORAGE_KEY_API = 'SIMS_API_BASE_URL';
 
@@ -24,11 +24,11 @@
   const DEFAULT_API_BASE = isLocalHost ? LOCAL_BACKEND_URL : RENDER_BACKEND_URL;
 
   // Resolve initial API base URL:
-  // When running on Netlify, if localStorage has old 'http://localhost:5000' stored from previous
-  // local sessions, clear it so the client automatically connects to the live Render backend.
+  // When running on Netlify, clear outdated local/dummy endpoints so the client automatically connects
+  // to the live Render backend.
   function getInitialApiBaseUrl() {
     const saved = (localStorage.getItem(STORAGE_KEY_API) || '').trim();
-    if (!isLocalHost && (!saved || saved.includes('localhost') || saved.includes('127.0.0.1'))) {
+    if (!isLocalHost && (!saved || saved.includes('localhost') || saved.includes('127.0.0.1') || saved.includes('student-management-api.onrender.com'))) {
       localStorage.removeItem(STORAGE_KEY_API);
       return RENDER_BACKEND_URL;
     }
@@ -134,6 +134,7 @@
     cancelApiSettingsBtn: document.getElementById('cancelApiSettingsBtn'),
     saveApiSettingsBtn: document.getElementById('saveApiSettingsBtn'),
     setLocalApiPreset: document.getElementById('setLocalApiPreset'),
+    setRenderApiPreset: document.getElementById('setRenderApiPreset'),
     testApiConnectionBtn: document.getElementById('testApiConnectionBtn'),
     apiTestResult: document.getElementById('apiTestResult'),
 
@@ -1035,6 +1036,11 @@
     DOM.setLocalApiPreset.addEventListener('click', () => {
       DOM.apiUrlInput.value = LOCAL_BACKEND_URL;
     });
+    if (DOM.setRenderApiPreset) {
+      DOM.setRenderApiPreset.addEventListener('click', () => {
+        DOM.apiUrlInput.value = RENDER_BACKEND_URL;
+      });
+    }
     DOM.testApiConnectionBtn.addEventListener('click', testApiConnection);
 
     // Close Modals on Backdrop Click
