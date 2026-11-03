@@ -471,5 +471,75 @@ When presenting this project to your professor or viva examiner:
 
 ---
 
+## 11. Model Context Protocol (MCP) Server & Scalable Container Deployment
+
+This system integrates an enterprise-grade **Model Context Protocol (MCP)** server built with the **official Model Context Protocol SDK** (`@modelcontextprotocol/sdk`). It allows AI agents, LLM tool-calling engines, and developer tools (Claude Desktop, Cursor, Copilot, LangChain) to safely interact with student records stored in **MongoDB Atlas** using **Streamable HTTP transport**.
+
+### Architecture & Transports
+- **Official SDK:** `@modelcontextprotocol/sdk` (Node.js 22 LTS compatible).
+- **Transport:** Streamable HTTP (`StreamableHTTPServerTransport`) with stateful session tracking and SSE capability.
+- **Unified Backend:** Reuses the existing Mongoose `Student` model and Atlas database connection. No duplicate databases or conflicting schemas.
+- **Dual Execution Modes:**
+  1. **Integrated Mode:** Automatically mounted onto the existing Express REST API at `/mcp` (`https://student-management-sytem-2ehv.onrender.com/mcp`).
+  2. **Scalable Container Mode:** Packaged with `Dockerfile` and configured in `render.yaml` as an independent, scalable Docker container service.
+
+### Available MCP Tools
+
+| Tool Name | Parameters | RBAC & Security | Purpose |
+|---|---|---|---|
+| `list_students` | `department` (str, opt), `semester` (int 1-8, opt), `limit` (int, opt), `skip` (int, opt), `authToken` (str, opt) | **Public Read**<br>*(Contact numbers masked unless authenticated)* | Fetches paginated student records with optional department and semester filtering. |
+| `get_student_by_id` | `identifier` (str, required), `authToken` (str, opt) | **Public Read**<br>*(Contact numbers masked unless authenticated)* | Fetches a single student record by `studentId` (e.g. `STU-1001`) or MongoDB `_id`. |
+| `search_students` | `query` (str, required), `limit` (int, opt), `authToken` (str, opt) | **Public Read**<br>*(Contact numbers masked unless authenticated)* | Keyword search across name, student ID, email, and department. |
+| `add_student` | `studentId` (str), `name` (str), `email` (str), `department` (enum), `semester` (int 1-8), `contact` (str, opt), `authToken` (str, opt) | **Protected (RBAC)**<br>*(Requires `admin`, `staff`, or `faculty`)* | Registers a new student record after strict uniqueness and schema validation. |
+| `update_student` | `identifier` (str, required), `name` (opt), `email` (opt), `department` (opt), `semester` (opt), `contact` (opt), `authToken` (str, opt) | **Protected (RBAC)**<br>*(Requires `admin` or `staff`)* | Updates academic or personal information of an existing student. |
+
+### Environment Variables for MCP
+
+| Variable | Description | Default / Example | Required |
+|---|---|---|---|
+| `MONGODB_URI` | MongoDB Atlas cluster connection string | `mongodb+srv://user:pass@cluster0...` | **Yes** |
+| `PORT` | HTTP port for server (assigned by Render) | `5000` | Yes |
+| `JWT_SECRET` | Secret key used to sign and verify role-based tokens | Strong random string | Recommended |
+| `MCP_API_KEY` | Administrative API key for agent-to-server auth | Custom secret string | Optional |
+| `FRONTEND_URL` | Allowed CORS origins for frontend web client | `*` or `https://<site>.netlify.app` | Yes |
+
+### Local Testing & Verification Commands
+
+```powershell
+# 1. Install dependencies
+cd backend
+npm install
+
+# 2. Run the complete MCP and REST automated test suite (29 assertions)
+npm run test:mcp
+
+# 3. Run the standalone MCP server locally
+npm run mcp
+
+# 4. Run the full unified backend (REST API + MCP)
+npm start
+```
+
+### Endpoints
+- **MCP Health Check:** `GET http://localhost:5000/mcp/health`
+- **MCP Streamable HTTP Endpoint:** `POST/GET http://localhost:5000/mcp`
+- **REST Health Check:** `GET http://localhost:5000/health`
+- **REST Students API:** `GET http://localhost:5000/api/students`
+
+### Render Scalable Container Deployment Steps
+
+1. Push your latest code to your Git repository connected to Render.
+2. In the **Render Dashboard**, open your **Blueprint** or navigate to **New +** &rarr; **Blueprint** / **Web Service**.
+3. Render automatically parses `render.yaml` and presents two services in the **Services column**:
+   - `student-management-backend` (Existing Node.js Web Service)
+   - `student-management-mcp-container` (New Scalable Docker Container)
+4. Ensure environment secrets are configured:
+   - `mongodb_uri` &rarr; Your MongoDB Atlas connection string.
+   - `jwt_secret` &rarr; Your secure JWT encryption secret.
+   - `mcp_api_key` &rarr; Optional administrative API key.
+5. Click **Apply / Deploy**. Render will build the container from `Dockerfile`, assign dynamic ports, and launch the service with auto-scaling capabilities.
+
+---
+
 ## License & Attribution
 Developed for College Cloud Computing Course Assignment. Licensed under the ISC License.

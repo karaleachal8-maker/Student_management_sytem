@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const studentRoutes = require('./routes/studentRoutes');
+const { mcpRouter } = require('./mcb/mcpServer');
 
 const path = require('path');
 
@@ -117,12 +118,17 @@ app.get('/', (req, res) => {
     documentation: 'See README.md for endpoint specifications',
     healthCheck: '/health',
     apiBase: '/api/students',
+    mcpEndpoint: '/mcp',
+    mcpHealth: '/mcp/health',
   });
 });
 
 // Mount Student API Routes (supports both /api/students and /students)
 app.use('/api/students', studentRoutes);
 app.use('/students', studentRoutes);
+
+// Mount Model Context Protocol (MCP) Streamable HTTP Router
+app.use('/mcp', mcpRouter);
 
 // ==========================================
 // Error Handling Middleware
@@ -158,6 +164,8 @@ const server = app.listen(PORT, () => {
   console.log(`🌐 Base URL: http://localhost:${PORT}`);
   console.log(`🩺 Health check: http://localhost:${PORT}/health`);
   console.log(`📚 API route: http://localhost:${PORT}/api/students`);
+  console.log(`🤖 MCP endpoint: http://localhost:${PORT}/mcp`);
+  console.log(`🩺 MCP health: http://localhost:${PORT}/mcp/health`);
   console.log('====================================================');
 });
 

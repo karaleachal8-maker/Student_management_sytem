@@ -1,12 +1,59 @@
+# ==========================================================
+# Render Blueprint Configuration: Student Information Management System
+# Documentation: https://render.com/docs/blueprint-spec
+# ==========================================================
+
 services:
+  # ----------------------------------------------------------
+  # Service 1: Existing REST API Backend (Node.js Web Service)
+  # Live Service: https://student-management-sytem-2ehv.onrender.com
+  # ----------------------------------------------------------
   - type: web
-    name: student-management-api
-    runtime: node
+    name: student-management-backend
+    env: node
+    plan: free
     rootDir: backend
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: npm start
+    healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: PORT
-        value: 5000
+        value: "5000"
+      - key: MONGODB_URI
+        fromSecret: mongodb_uri
+      - key: FRONTEND_URL
+        value: "*"
+      - key: JWT_SECRET
+        fromSecret: jwt_secret
+
+  # ----------------------------------------------------------
+  # Service 2: New Scalable Container Service (Docker / MCP)
+  # Added to the Render Services column for Model Context Protocol
+  # ----------------------------------------------------------
+  - type: web
+    name: student-management-mcp-container
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /mcp/health
+    # Scaling settings: On Render Standard/Pro plans, uncomment scaling block for horizontal auto-scaling
+    # scaling:
+    #   minInstances: 1
+    #   maxInstances: 3
+    #   targetCPUPercent: 75
+    #   targetMemoryPercent: 75
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: MONGODB_URI
+        fromSecret: mongodb_uri
+      - key: JWT_SECRET
+        fromSecret: jwt_secret
+      - key: MCP_API_KEY
+        fromSecret: mcp_api_key
       - key: FRONTEND_URL
         value: "*"

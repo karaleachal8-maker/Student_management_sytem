@@ -1,0 +1,11 @@
+# Docker ignore rules for Student Management System
+**/node_modules
+backend/node_modules
+.git
+.gitignore
+.env
+backend/.env
+*.log
+npm-debug.log*
+.DS_Store
+

@@ -4,15 +4,21 @@
   "description": "REST API Backend for Student Information Management System",
   "main": "server.js",
   "scripts": {
+    "mcb": "node mcb/mcpServer.js",
+    "mcp": "node mcb/mcpServer.js",
+    "test:mcp": "node test/test-mcp.js",
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node seed.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "mongoose": "^8.9.2"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.9.2",
+    "zod": "^4.6.7"
   },
   "keywords": [
     "student-management",
